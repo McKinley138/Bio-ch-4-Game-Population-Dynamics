@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glencoe Bio Ch 5: Biodiversity Classifier</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #2c3e50;
+            --land-color: #d4e157;
+            --water-color: #81d4fa;
+            --special-color: #ffcc80;
+            --accent-blue: #3498db;
+            --error-red: #e74c3c;
+            --gold: #d4af37;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+            user-select: none;
+        }
+
+        /* --- OVERLAYS --- */
+        .screen-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #start-screen {
+            display: flex;
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+        }
+
+        .name-input {
+            padding: 15px;
+            font-size: 1.2rem;
+            border-radius: 10px;
+            border: none;
+            margin: 20px;
+            width: 300px;
+            text-align: center;
+            outline: none;
+        }
+
+        /* --- CERTIFICATE STYLE --- */
+        #certificate {
+            display: none;
+            background: white;
+            color: #333;
+            width: 800px;
+            padding: 40px;
+            border: 15px double var(--gold);
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            position: relative;
+            text-align: center;
+        }
+
+        .cert-title {
+            font-family: 'Georgia', serif;
+            font-size: 3rem;
+            color: #b8860b;
+            margin-bottom: 10px;
+        }
+
+        .cert-name {
+            font-size: 2.5rem;
+            font-style: italic;
+            border-bottom: 2px solid #333;
+            display: inline-block;
+            margin: 20px 0;
+            padding: 0 50px;
+            font-family: 'Brush Script MT', cursive;
+        }
+
+        .cert-text {
+            font-size: 1.3rem;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+
+        .instruction-box {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ffeeba;
+            margin-top: 30px;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        /* --- GAME ELEMENTS --- */
+        #mistake-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 3px solid var(--error-red);
+            color: var(--error-red);
+            padding: 10px 20px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 3000;
+            pointer-events: none;
+            display: none;
+        }
+
+        .orbit-lane {
+            position: absolute; 
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .main-content {
+            width: 850px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            margin-bottom: 200px;
+            display: none;
+        }
+
+        #header {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            width: 100%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .stats {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            width: 100%;
+            margin: 30px 0 10px 0;
+            font-size: 1.6rem;
+            font-weight: bold;
+            border-bottom: 3px solid #ccc;
+            padding-bottom: 5px;
+            text-align: center;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px 0;
+            width: 100%;
+        }
+
+        .biome-zone {
+            border: 3px dashed #999;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            padding: 15px;
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .land { background-color: #f1f8e9; border-color: #8bc34a; }
+        .water { background-color: #e1f5fe; border-color: #03a9f4; }
+        .special { background-color: #fff3e0; border-color: #ff9800; }
+
+        .biome-zone.highlight {
+            transform: scale(1.05);
+            background-color: #fff !important;
+            border-style: solid;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        .item {
+            width: 130px;
+            padding: 12px;
+            background: white;
+            border: 2px solid var(--accent-blue);
+            border-radius: 10px;
+            text-align: center;
+            cursor: grab;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            font-size: 0.9rem;
+            font-weight: bold;
+            position: absolute;
+            z-index: 100;
+            pointer-events: auto;
+            transition: transform 0.1s;
+        }
+
+        .returning {
+            transition: left 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                        right 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                        top 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        }
+
+        .item:active { cursor: grabbing; transform: scale(1.1); }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(10px, -15px); }
+        }
+
+        .floating { animation: float 6s ease-in-out infinite; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .wrong { animation: shake 0.4s ease-in-out; }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="screen-overlay">
+        <h1>🌿 Welcome to the Population Ecology Challenge</h1>
+        <p>Please enter your <b style="color: #ffcc80;">First Name and Last Initial</b> (e.g., John D.):</p>
+        <input type="text" id="student-name-input" class="name-input" placeholder="First Name Last Initial">
+        <button id="start-btn">Start Assignment</button>
+    </div>
+
+    <div id="mistake-counter">Mistakes: 0 / 5</div>
+
+    <div class="orbit-lane" id="lane-orbit"></div>
+
+    <div class="main-content" id="main-content">
+        <div id="header">
+            <h1 id="level-title">Level 1: Biodiversity Types</h1>
+            <p id="level-desc">Drag items from the <b style="color: var(--accent-blue);">Side Zones</b> to the correct Biodiversity Type!</p>
+            <div class="stats">Progress: <span id="score">0</span> / <span id="total">0</span></div>
+        </div>
+
+        <div id="biomes-area"></div>
+    </div>
+
+    <!-- NEXT LEVEL SCREEN -->
+    <div id="next-level-screen" class="screen-overlay">
+        <h1>🌟 Level 1 Complete!</h1>
+        <p>You've mastered population characteristics. Ready for limiting factors and growth models?</p>
+        <p><b style="color: #ffcc80;">Warning: Level 2 only allows THREE mistakes!</b></p>
+        <button onclick="startLevel(2)">Start Level 2 ➡️</button>
+    </div>
+
+    <!-- FAIL SCREEN -->
+    <div id="fail-screen" class="screen-overlay">
+        <h1 style="color: var(--error-red);">❌ Level Failed!</h1>
+        <p>You reached the limit of mistakes for this level. Review Chapter 4 and try again!</p>
+        <button onclick="retryCurrentLevel()" style="background: var(--error-red);">Retry This Level</button>
+    </div>
+
+    <!-- CERTIFICATE SCREEN -->
+    <div id="cert-screen" class="screen-overlay">
+        <div id="certificate">
+            <div class="cert-title">Certificate of Achievement</div>
+            <div class="cert-text">This certifies that</div>
+            <div id="cert-name" class="cert-name">Student Name</div>
+            <div class="cert-text">has successfully completed the<br><b>Biology Chapter 4: Population Ecology Challenge</b><br>demonstrating mastery of Population Dynamics and Human Demography.</div>
+            <div style="margin-top: 20px; font-size: 0.9rem; color: #666;">Date: <span id="cert-date"></span></div>
+        </div>
+        <div class="instruction-box">
+            📸 <b>ACTION REQUIRED:</b> Take a screenshot of this certificate and upload the file to Google Classroom to receive credit!
+        </div>
+        <button onclick="location.reload()">Restart Activity</button>
+    </div>
+
+    <script>
+        const levelData = {
+            1: {
+                title: "Level 1: Population Characteristics",
+                desc: "Drag items from the <b style='color: var(--accent-blue);'>Side Zones</b> to the correct Population Characteristic!",
+                maxMistakes: 5,
+                biomes: [
+                    { id: 'density', name: 'Density', class: 'land', text: 'Population Density<br>(Organisms per Area)' },
+                    { id: 'distribution', name: 'Distribution', class: 'land', text: 'Spatial Distribution<br>(Dispersion Patterns)' },
+                    { id: 'range', name: 'Range', class: 'land', text: 'Population Range<br>(Geographical Limits)' },
+                ],
+                items: [
+                    { text: 'Organisms per Unit Area', biome: 'density' },
+                    { text: 'Crowding Level', biome: 'density' },
+                    { text: 'Number per Square Mile', biome: 'density' },
+                    { text: 'Clumped Pattern', biome: 'distribution' },
+                    { text: 'Uniform Spacing', biome: 'distribution' },
+                    { text: 'Random Distribution', biome: 'distribution' },
+                    { text: 'Inhabited Area', biome: 'range' },
+                    { text: 'Spatial Limits', biome: 'range' },
+                    { text: 'Geographic Boundary', biome: 'range' },
+                ]
+            },
+            2: {
+                title: "Level 2: Limiting Factors & Growth",
+                desc: "Drag items from the <b style='color: var(--accent-blue);'>Side Zones</b> to the correct Growth/Limiting Category!",
+                maxMistakes: 3,
+                biomes: [
+                    { id: 'independent', name: 'Independent', class: 'special', text: 'Density-Independent Factors' },
+                    { id: 'dependent', name: 'Dependent', class: 'water', text: 'Density-Dependent Factors' },
+                    { id: 'growth', name: 'Growth', class: 'special', text: 'Growth Models & Strategies' },
+                ],
+                items: [
+                    { text: 'Weather Events', biome: 'independent' },
+                    { text: 'Forest Fire', biome: 'independent' },
+                    { text: 'Human Alterations', biome: 'independent' },
+                    { text: 'Disease Spread', biome: 'dependent' },
+                    { text: 'Competition', biome: 'dependent' },
+                    { text: 'Predation', biome: 'dependent' },
+                    { text: 'Exponential (J-Curve)', biome: 'growth' },
+                    { text: 'Logistic (S-Curve)', biome: 'growth' },
+                    { text: 'Carrying Capacity (K)', biome: 'growth' },
+                ]
+            },
+            3: {
+                title: "Level 3: Reproductive Strategies",
+                desc: "Analyze the <b style='color: var(--accent-blue);'>Reproductive Strategy Data</b>. Answer the questions based on the evidence provided!",
+                maxMistakes: 2,
+                isQuiz: true,
+                data: {
+                    table: `
+                        <table style='width:100%; border-collapse:collapse; background:white; color:black; font-family:sans-serif; font-size:0.9rem; border: 2px solid black;'>
+                            <tr style='background:#ccc;'>
+                                <th style='border: 1px solid black; padding: 8px;'>Strategy</th>
+                                <th style='border: 1px solid black; padding: 8px;'>Body Size</th>
+                                <th style='border: 1px solid black; padding: 8px;'>Offspring Number</th>
+                                <th style='border: 1px solid black; padding: 8px;'>Parental Care</th>
+                                <th style='border: 1px solid black; padding: 8px;'>Lifespan</th>
+                            </tr>
+                            <tr style='text-align:center;'>
+                                <td style='border: 1px solid black; padding: 8px; font-weight:bold;'>r-strategist</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Small</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Many</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Minimal</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Short</td>
+                            </tr>
+                            <tr style='text-align:center;'>
+                                <td style='border: 1px solid black; padding: 8px; font-weight:bold;'>k-strategist</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Large</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Few</td>
+                                <td style='border: 1px solid black; padding: 8px;'>High</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Long</td>
+                            </tr>
+                        </table>
+                    `,
+                    questions: [
+                        { 
+                            q: "Based on the table, which strategy is more likely to produce a large number of offspring with minimal care?", 
+                            options: ["k-strategist", "r-strategist", "Both", "Neither"], 
+                            correct: 1 
+                        },
+                        { 
+                            q: "Which characteristic is typical of a k-strategist according to the data?", 
+                            options: ["Small body size", "Short lifespan", "High parental care", "Many offspring"], 
+                            correct: 2 
+                        },
+                        { 
+                            q: "If a species has a long lifespan and produces few offspring, it is classified as a:", 
+                            options: ["r-strategist", "k-strategist", "Exponential grower", "Density-independent factor"], 
+                            correct: 1 
+                        },
+                        { 
+                            q: "Which strategy is most common among insects?", 
+                            options: ["k-strategist", "r-strategist", "Logistic growth", "Zero population growth"], 
+                            correct: 1 
+                        }
+                    ]
+                }
+            },
+            4: {
+                title: "Level 4: Human Demography Analysis",
+                desc: "Analyze the demography data and answer the questions. <b style='color: red;'>One wrong answer and you must restart the level!</b>",
+                maxMistakes: 1,
+                isQuiz: true,
+                data: {
+                    table: `
+                        <table style='width:100%; border-collapse:collapse; background:white; color:black; font-family:sans-serif; font-size:0.9rem; border: 2px solid black;'>
+                            <tr style='background:#ccc;'>
+                                <th style='border: 1px solid black; padding: 8px;'>Metric</th>
+                                <th style='border: 1px solid black; padding: 8px;'>Developing Country</th>
+                                <th style='border: 1px solid black; padding: 8px;'>Developed Country</th>
+                                <th style='border: 1px solid black; padding: 8px;'>ZPG State</th>
+                            </tr>
+                            <tr style='text-align:center;'>
+                                <td style='border: 1px solid black; padding: 8px; font-weight:bold;'>Birth Rate</td>
+                                <td style='border: 1px solid black; padding: 8px;'>High</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Low</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Low/Moderate</td>
+                            </tr>
+                            <tr style='text-align:center;'>
+                                <td style='border: 1px solid black; padding: 8px; font-weight:bold;'>Death Rate</td>
+                                <td style='border: 1px solid black; padding: 8px;'>High/Falling</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Low</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Low/Moderate</td>
+                            </tr>
+                            <tr style='text-align:center;'>
+                                <td style='border: 1px solid black; padding: 8px; font-weight:bold;'>Growth Rate</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Rapid</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Slow/Stable</td>
+                                <td style='border: 1px solid black; padding: 8px;'>Zero</td>
+                            </tr>
+                        </table>
+                    `,
+                    questions: [
+                        { 
+                            q: "Based on the table, what characterizes a state of Zero Population Growth (ZPG)?", 
+                            options: ["High birth rates", "Rapid growth", "Birth rate equals death rate", "Falling death rates"], 
+                            correct: 2 
+                        },
+                        { 
+                            q: "Which country type is most likely to be in the early stages of the Demographic Transition?", 
+                            options: ["Developed Country", "Developing Country", "ZPG State", "None of the above"], 
+                            correct: 1 
+                        },
+                        { 
+                            q: "Why do developed countries typically have slower population growth than developing countries?", 
+                            options: ["Higher death rates", "Lower birth rates", "Lack of medicine", "Higher immigration"], 
+                            correct: 1 
+                        },
+                        { 
+                            q: "What is the primary focus of Demography?", 
+                            options: ["Studying genetic alleles", "Studying human population size and distribution", "Measuring carrying capacity of insects", "Analyzing r-strategies"], 
+                            correct: 1 
+                        }
+                    ]
+                }
+            },
+            5: {
+                title: "Level 5: Critical Thinking Challenge",
+                desc: "Apply your knowledge to a complex scenario. <b style='color: red;'>One wrong answer and you must restart the level!</b>",
+                maxMistakes: 1,
+                isQuiz: true,
+                data: {
+                    table: `
+                        <div style='background:white; color:black; padding:15px; border:2px solid black; font-family:sans-serif; font-size:0.9rem;'>
+                            <b style='font-size:1.1rem;'>Scenario: The Island of Aethelgard</b><br><br>
+                            A population of rare flightless birds was introduced to a resource-rich island. <br>
+                            - <b>Year 1-5:</b> Population grew from 10 to 500 individuals (J-curve).<br>
+                            - <b>Year 6-10:</b> Growth slowed and stabilized at 1,200 individuals.<br>
+                            - <b>Year 11:</b> A severe volcanic eruption destroyed 40% of the nesting habitat.<br>
+                            - <b>Year 12:</b> A new predator was accidentally introduced to the island.
+                        </div>
+                    `,
+                    questions: [
+                        { 
+                            q: "Between Year 6 and 10, the population reached its 'Carrying Capacity (K)'. What most likely caused the growth to slow?", 
+                            options: ["A sudden drop in birth rate", "Limited resources like food and nesting sites", "A decrease in immigration", "The birds switched to r-strategy"], 
+                            correct: 1 
+                        },
+                        { 
+                            q: "The volcanic eruption in Year 11 is an example of which type of limiting factor?", 
+                            options: ["Density-Dependent", "Density-Independent", "Biotic Factor", "k-selection factor"], 
+                            correct: 1 
+                        },
+                        { 
+                            q: "How will the introduction of the predator in Year 12 most likely affect the population's Carrying Capacity (K)?", 
+                            options: ["Increase K by removing weak individuals", "Have no effect on K", "Decrease K by increasing the death rate", "Change the birds into r-strategists"], 
+                            correct: 2 
+                        },
+                        { 
+                            q: "If the birds are k-strategists, how will they most likely respond to the habitat loss and predation?", 
+                            options: ["Produce thousands of eggs to compensate", "Increase parental care but produce fewer offspring", "Rapidly evolve into r-strategists", "Ignore the threats due to large body size"], 
+                            correct: 1 
+                        }
+                    ]
+                }
+            },
+            6: {
+                title: "Level 6: Population Forecasting",
+                desc: "Predict population outcomes based on changing variables. <b style='color: red;'>One wrong answer and you must restart the level!</b>",
+                maxMistakes: 1,
+                isQuiz: true,
+                data: {
+                    table: `
+                        <div style='background:white; color:black; padding:15px; border:2px solid black; font-family:sans-serif; font-size:0.9rem;'>
+                            <b style='font-size:1.1rem;'>Current Population Status: Red Fox Colony</b><br><br>
+                            - <b>Current Population:</b> 800 individuals<br>
+                            - <b>Carrying Capacity (K):</b> 1,000 individuals<br>
+                            - <b>Birth Rate:</b> 15% per year<br>
+                            - <b>Death Rate:</b> 5% per year<br>
+                            - <b>Net Migration:</b> 0 (Stable)<br><br>
+                            <b style='color: #d35400;'>Upcoming Event:</b> A neighboring territory is developed into a shopping mall, reducing available habitat by 30%.
+                        </div>
+                    `,
+                    questions: [
+                        { 
+                            q: "Based on the current data, what is the current Population Growth Rate (PGR) before the event?", 
+                            options: ["-10% (Declining)", "0% (Stable)", "10% (Increasing)", "20% (Rapid)"], 
+                            correct: 2 
+                        },
+                        { 
+                            q: "After the habitat loss, the new Carrying Capacity (K) drops to 700. Since the current population is 800, what will happen immediately?", 
+                            options: ["Population will continue to grow to 1,000", "Population will stay at 800", "Death rate will likely increase as population exceeds K", "Birth rate will automatically double"], 
+                            correct: 2 
+                        },
+                        { 
+                            q: "If the population crashes to 400 due to the habitat loss, which growth model will the population most likely follow as it recovers toward the new K (700)?", 
+                            options: ["Exponential (J-curve) indefinitely", "Logistic (S-curve)", "Linear growth", "Negative growth"], 
+                            correct: 1 
+                        },
+                        { 
+                            q: "Which of the following would be the most effective conservation strategy to raise the Carrying Capacity (K) back to 1,000?", 
+                            options: ["Increasing the birth rate", "Creating a wildlife corridor to more habitat", "Reducing the number of predators", "Increasing the immigration rate"], 
+                            correct: 1 
+                        }
+                    ]
+                }
+            }
+        };
+
+        let levelScores = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        let levelTrials = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        let levelTimes = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        let completedLevels = { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false };
+        let studentName = "";
+        let currentLevel = 1;
+        let score = 0;
+        let mistakes = 0;
+        let currentMaxMistakes = 5;
+        let activeItem = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        let scrollInterval = null;
+        let levelStartTime = 0;
+
+        function beginGame() {
+            console.log("beginGame called");
+            const input = document.getElementById('student-name-input');
+            if (!input) {
+                console.error("Could not find student-name-input element");
+                return;
+            }
+            const val = input.value.trim();
+            console.log("Input value:", val);
+            if (val === "") {
+                alert("Please enter your name to start the assignment!");
+                return;
+            }
+            studentName = val;
+            console.log("Student name set to:", studentName);
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'flex';
+            document.getElementById('mistake-counter').style.display = 'block';
+            startLevel(1);
+        }
+
+        // Add event listener for the start button explicitly
+        document.addEventListener('DOMContentLoaded', () => {
+            const startBtn = document.getElementById('start-btn');
+            if (startBtn) {
+                startBtn.addEventListener('click', beginGame);
+                console.log("Start button event listener attached");
+            } else {
+                console.error("Start button not found in DOM");
+            }
+        });
+
+        function retryCurrentLevel() {
+            document.getElementById('fail-screen').style.display = 'none';
+            
+            // Reset all items to their resting positions before restarting level logic
+            document.querySelectorAll('.item').forEach(item => {
+                item.classList.remove('wrong', 'returning');
+                item.style.position = 'absolute';
+                item.style.pointerEvents = 'auto';
+                const side = item.dataset.homeSide;
+                if (side === 'left') {
+                    item.style.right = 'auto';
+                    item.style.left = '20px';
+                } else {
+                    item.style.left = 'auto';
+                    item.style.right = '20px';
+                }
+                item.style.top = (parseFloat(item.dataset.homeY) + window.scrollY) + 'px';
+                document.getElementById('lane-orbit').appendChild(item);
+            });
+
+            startLevel(currentLevel);
+        }
+
+        function startLevel(lvl) {
+            document.getElementById('next-level-screen').style.display = 'none';
+            document.getElementById('fail-screen').style.display = 'none';
+            
+            currentLevel = lvl;
+            score = 0;
+            mistakes = 0;
+            currentMaxMistakes = levelData[lvl].maxMistakes;
+            levelTrials[lvl]++;
+            levelStartTime = Date.now();
+            
+            document.getElementById('mistake-counter').innerText = `Mistakes: 0 / ${currentMaxMistakes}`;
+            document.getElementById('level-title').innerText = levelData[lvl].title;
+            document.getElementById('level-desc').innerHTML = levelData[lvl].desc;
+            document.getElementById('score').innerText = "0";
+            document.getElementById('total').innerText = levelData[lvl].isQuiz ? levelData[lvl].data.questions.length : levelData[lvl].items.length;
+
+            // 1. Clear the main game areas
+            document.getElementById('biomes-area').innerHTML = "";
+            document.getElementById('lane-orbit').innerHTML = "";
+            
+            // 2. CRITICAL: Remove ALL items from the DOM regardless of where they are attached
+            // This prevents residual buttons from previous levels appearing
+            document.querySelectorAll('.item').forEach(item => item.remove());
+
+            if (levelData[lvl].isQuiz) {
+                renderQuiz(lvl);
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'grid-container';
+            levelData[lvl].biomes.forEach(b => {
+                const zone = document.createElement('div');
+                zone.className = `biome-zone ${b.class}`;
+                zone.dataset.biome = b.id;
+                zone.innerHTML = b.text;
+                grid.appendChild(zone);
+            });
+            
+            const title = document.createElement('div');
+            title.className = 'section-title';
+            title.innerText = lvl === 1 ? "Types of Biodiversity" : (lvl === 2 ? "Threats & Conservation" : "Hawaii Case Study");
+            
+            document.getElementById('biomes-area').appendChild(title);
+            document.getElementById('biomes-area').appendChild(grid);
+
+            const shuffledItems = shuffle([...levelData[lvl].items]);
+            spawnItems(shuffledItems);
+        }
+
+        function renderQuiz(lvl) {
+            const area = document.getElementById('biomes-area');
+            const quizData = levelData[lvl].data;
+            
+            const container = document.createElement('div');
+            container.style.width = '100%';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.alignItems = 'center';
+            container.style.marginTop = '30px';
+
+            const tableDiv = document.createElement('div');
+            tableDiv.style.marginBottom = '40px';
+            tableDiv.innerHTML = quizData.table;
+            container.appendChild(tableDiv);
+
+            const qDiv = document.createElement('div');
+            qDiv.id = 'quiz-question-container';
+            qDiv.style.textAlign = 'center';
+            qDiv.style.width = '100%';
+            container.appendChild(qDiv);
+
+            area.appendChild(container);
+            showQuestion(lvl, 0);
+        }
+
+        function showQuestion(lvl, qIdx) {
+            const qContainer = document.getElementById('quiz-question-container');
+            const qData = levelData[lvl].data.questions[qIdx];
+            
+            // Create a copy of options with their original indices to maintain correct answers
+            const optionsWithIndices = qData.options.map((opt, i) => ({ text: opt, index: i }));
+            // Shuffle the options
+            const shuffledOptions = shuffle([...optionsWithIndices]);
+            
+            qContainer.innerHTML = `
+                <div style="font-size:1.4rem; font-weight:bold; margin-bottom:20px;">Question ${qIdx + 1}: ${qData.q}</div>
+                <div class="grid-container" style="grid-template-columns: repeat(2, 1fr);">
+                    ${shuffledOptions.map(optObj => `
+                        <button onclick="checkQuizAnswer(${lvl}, ${qIdx}, ${optObj.index})" style="background:white; color:black; border:2px solid var(--accent-blue); text-align:left; font-weight:normal;">${optObj.text}</button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function checkQuizAnswer(lvl, qIdx, selectedIdx) {
+            const qData = levelData[lvl].data.questions[qIdx];
+            if (selectedIdx === qData.correct) {
+                score++;
+                document.getElementById('score').innerText = score;
+                if (qIdx + 1 < levelData[lvl].data.questions.length) {
+                    showQuestion(lvl, qIdx + 1);
+                } else {
+                    levelScores[lvl] = score;
+                    levelTimes[lvl] = Math.floor((Date.now() - levelStartTime) / 1000);
+                    completedLevels[lvl] = true;
+                    handleLevelCompletion();
+                }
+            } else {
+                mistakes++;
+                document.getElementById('mistake-counter').innerText = `Mistakes: ${mistakes} / ${currentMaxMistakes}`;
+                if (mistakes >= currentMaxMistakes) {
+                    document.getElementById('fail-screen').style.display = 'flex';
+                } else {
+                    alert("Incorrect! Try again.");
+                }
+            }
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function spawnItems(items) {
+            const lane = document.getElementById('lane-orbit');
+            items.forEach((item, index) => {
+                const el = document.createElement('div');
+                el.className = 'item floating';
+                el.innerText = item.text;
+                el.dataset.biome = item.biome;
+                const side = index % 2 === 0 ? 'left' : 'right';
+                const spacing = 110;
+                const startY = side === 'left' ? 80 : 140;
+                const targetY = startY + (Math.floor(index / 2) * spacing);
+                if (side === 'left') { el.style.left = '20px'; el.style.right = 'auto'; } else { el.style.right = '20px'; el.style.left = 'auto'; }
+                el.dataset.homeSide = side;
+                el.dataset.homeY = targetY;
+                el.style.top = targetY + 'px';
+                el.style.animationDelay = (Math.random() * 5) + 's';
+                el.addEventListener('mousedown', (e) => {
+                    activeItem = el;
+                    el.classList.remove('floating', 'returning');
+                    const rect = el.getBoundingClientRect();
+                    offsetX = e.clientX - rect.left;
+                    offsetY = e.clientY - rect.top;
+                    document.body.appendChild(el);
+                    el.style.right = 'auto';
+                    el.style.left = (e.pageX - offsetX) + 'px';
+                    el.style.top = (e.pageY - offsetY) + 'px';
+                    el.style.zIndex = 1000;
+                });
+                lane.appendChild(el);
+            });
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            if (!activeItem) return;
+            activeItem.style.left = (e.pageX - offsetX) + 'px';
+            activeItem.style.top = (e.pageY - offsetY) + 'px';
+            const scrollThreshold = 100; const scrollSpeed = 12;
+            if (e.clientY < scrollThreshold) {
+                if (!scrollInterval) scrollInterval = setInterval(() => window.scrollBy(0, -scrollSpeed), 16);
+            } else if (e.clientY > window.innerHeight - scrollThreshold) {
+                if (!scrollInterval) scrollInterval = setInterval(() => window.scrollBy(0, scrollSpeed), 16);
+            } else { clearInterval(scrollInterval); scrollInterval = null; }
+            document.querySelectorAll('.biome-zone').forEach(zone => {
+                const rect = zone.getBoundingClientRect();
+                if (e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom) {
+                    zone.classList.add('highlight');
+                } else { zone.classList.remove('highlight'); }
+            });
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (!activeItem) return;
+            const item = activeItem;
+            activeItem = null;
+            clearInterval(scrollInterval);
+            scrollInterval = null;
+            item.style.pointerEvents = 'none';
+            const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+            const zone = elementBelow ? elementBelow.closest('.biome-zone') : null;
+            if (zone) {
+                if (zone.dataset.biome === item.dataset.biome) {
+                    score++;
+                    document.getElementById('score').innerText = score;
+                    item.style.position = 'static';
+                    item.style.margin = '5px';
+                    item.style.left = 'auto'; item.style.right = 'auto'; item.style.top = 'auto';
+                    item.classList.remove('floating', 'returning');
+                    item.style.animation = 'none'; item.style.cursor = 'default'; item.style.pointerEvents = 'auto';
+                    zone.appendChild(item);
+                    item.onmousedown = null;
+                    if (score === levelData[currentLevel].items.length) {
+                        levelScores[currentLevel] = score;
+                        levelTimes[currentLevel] = Math.floor((Date.now() - levelStartTime) / 1000);
+                        completedLevels[currentLevel] = true;
+                        handleLevelCompletion();
+                    }
+                } else {
+                    mistakes++;
+                    document.getElementById('mistake-counter').innerText = `Mistakes: ${mistakes} / ${currentMaxMistakes}`;
+                    if (mistakes >= currentMaxMistakes) { document.getElementById('fail-screen').style.display = 'flex'; return; }
+                    item.classList.add('wrong');
+                    setTimeout(() => {
+                        item.classList.remove('wrong'); item.classList.add('returning');
+                        const side = item.dataset.homeSide;
+                        if (side === 'left') { item.style.right = 'auto'; item.style.left = '20px'; } else { item.style.left = 'auto'; item.style.right = '20px'; }
+                        item.style.top = (parseFloat(item.dataset.homeY) + window.scrollY) + 'px';
+                        setTimeout(() => { item.classList.remove('returning'); document.getElementById('lane-orbit').appendChild(item); item.style.pointerEvents = 'auto'; }, 600);
+                    }, 400);
+                }
+            } else {
+                item.classList.add('returning');
+                const side = item.dataset.homeSide;
+                if (side === 'left') { item.style.right = 'auto'; item.style.left = '20px'; } else { item.style.left = 'auto'; item.style.right = '20px'; }
+                item.style.top = (parseFloat(item.dataset.homeY) + window.scrollY) + 'px';
+                setTimeout(() => { item.classList.remove('returning'); document.getElementById('lane-orbit').appendChild(item); item.style.pointerEvents = 'auto'; }, 600);
+            }
+        });
+
+        function showCertificate() {
+            // SECURITY CHECK: Ensure all levels are completed
+            const allDone = Object.values(completedLevels).every(val => val === true);
+            if (!allDone) {
+                alert("Access Denied: You must complete all levels in order to receive your certificate!");
+                startLevel(1); // Send them back to the start
+                return;
+            }
+
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('mistake-counter').style.display = 'none';
+            document.getElementById('cert-screen').style.display = 'flex';
+            document.getElementById('certificate').style.display = 'block';
+            document.getElementById('cert-name').innerText = studentName;
+            document.getElementById('cert-date').innerText = new Date().toLocaleDateString();
+
+            // Calculate overall percentage
+            let totalPossible = 0;
+            let totalEarned = 0;
+            for (let lvl in levelData) {
+                totalPossible += levelData[lvl].isQuiz ? levelData[lvl].data.questions.length : levelData[lvl].items.length;
+                totalEarned += levelScores[lvl] || 0;
+            }
+            const percentage = Math.round((totalEarned / totalPossible) * 100);
+
+            // Create score and trial table HTML
+            let tableHtml = `
+                <div style="margin: 20px 0; color: #555;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 1.1rem; margin-bottom: 20px;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #b8860b;">
+                                <th style="padding: 10px; text-align: left;">Level</th>
+                                <th style="padding: 10px; text-align: center;">Score</th>
+                                <th style="padding: 10px; text-align: center;">Trials</th>
+                                <th style="padding: 10px; text-align: center;">Time (s)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            for (let i = 1; i <= 6; i++) {
+                const possible = levelData[i].isQuiz ? levelData[i].data.questions.length : levelData[i].items.length;
+                tableHtml += `
+                    <tr>
+                        <td style="padding: 8px; text-align: left;">Level ${i}</td>
+                        <td style="padding: 8px; text-align: center;">${levelScores[i]}/${possible}</td>
+                        <td style="padding: 8px; text-align: center;">${levelTrials[i]}</td>
+                        <td style="padding: 8px; text-align: center;">${levelTimes[i]}s</td>
+                    </tr>
+                `;
+            }
+            tableHtml += `</tbody></table></div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: #b8860b; margin-bottom: 20px;">Overall Score: ${percentage}%</div>`;
+
+            // Insert score breakdown before the date
+            const certDiv = document.getElementById('certificate');
+            const dateDiv = certDiv.querySelector('div:last-child');
+            const scoreDiv = document.createElement('div');
+            scoreDiv.innerHTML = tableHtml;
+            certDiv.insertBefore(scoreDiv, dateDiv);
+        }
+
+        // Update next level logic to handle 4 levels
+        function handleLevelCompletion() {
+            if (currentLevel === 1) {
+                document.getElementById('next-level-screen').innerHTML = `
+                    <h1>🌟 Level 1 Complete!</h1>
+                    <p>You've mastered population characteristics. Ready for limiting factors and growth models?</p>
+                    <p><b style="color: #ffcc80;">Warning: Level 2 allows 3 mistakes!</b></p>
+                    <button onclick="startLevel(2)">Start Level 2 ➡️</button>
+                `;
+                document.getElementById('next-level-screen').style.display = 'flex';
+            } else if (currentLevel === 2) {
+                document.getElementById('next-level-screen').innerHTML = `
+                    <h1>🌟 Level 2 Complete!</h1>
+                    <p>Great job! Now let's look at reproductive strategies.</p>
+                    <p><b style="color: #ffcc80;">Warning: Level 3 only allows 2 mistakes!</b></p>
+                    <button onclick="startLevel(3)">Start Level 3 ➡️</button>
+                `;
+                document.getElementById('next-level-screen').style.display = 'flex';
+            } else if (currentLevel === 3) {
+                document.getElementById('next-level-screen').innerHTML = `
+                    <h1>🌟 Level 3 Complete!</h1>
+                    <p>You've analyzed the strategies perfectly. Time for the Human Demography Challenge!</p>
+                    <p><b style="color: #ffcc80;">Warning: Level 4 allows ONLY ONE mistake!</b></p>
+                    <button onclick="startLevel(4)">Start Level 4 ➡️</button>
+                `;
+                document.getElementById('next-level-screen').style.display = 'flex';
+            } else if (currentLevel === 4) {
+                document.getElementById('next-level-screen').innerHTML = `
+                    <h1>🌟 Level 4 Complete!</h1>
+                    <p>You've mastered demography. Now for the Critical Thinking Challenge!</p>
+                    <p><b style="color: #ffcc80;">Warning: Level 5 allows ONLY ONE mistake!</b></p>
+                    <button onclick="startLevel(5)">Start Level 5 ➡️</button>
+                `;
+                document.getElementById('next-level-screen').style.display = 'flex';
+            } else if (currentLevel === 5) {
+                document.getElementById('next-level-screen').innerHTML = `
+                    <h1>🌟 Level 5 Complete!</h1>
+                    <p>You've solved the island mystery. Ready for the final Population Forecasting challenge?</p>
+                    <p><b style="color: #ffcc80;">Warning: Level 6 allows ONLY ONE mistake!</b></p>
+                    <button onclick="startLevel(6)">Start Level 6 ➡️</button>
+                `;
+                document.getElementById('next-level-screen').style.display = 'flex';
+            } else {
+                showCertificate();
+            }
+        }
+    </script>
+</body>
+</html>
